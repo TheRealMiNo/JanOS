@@ -39,7 +39,12 @@ uint32_t get_bar_address() {
                     print_string("found xHCI controller\n");
 
                     // return bar_adress
-                    return pci_config_read(bus, device, function, 0x10);
+                    uint32_t bar = pci_config_read(bus, device, function, 0x10);
+                    if (bar & 0x01) {
+                        print_string("found bar, but no memory mapped");
+                        continue;
+                    }
+                    return bar;
                 }
             }
         }
@@ -48,25 +53,12 @@ uint32_t get_bar_address() {
 
 void reset_controller(uint32_t bar_address){
 // stopp the xHCI
-uint32_t* usb_command_reg = (uint32_t*)(bar_address + 0x80);
-*usb_command_reg &= ~0x1;
-print_string("1");
+print_string("initialize xHCI reset\n");
+uint32_t* usb_command_reg = (uint32_t*)(bar_address);
+*usb_command_reg |= 0x01;
+while (*usb_command_reg & 1) {
+    // Wait for the RESET bit to clear
+}
+print_string("reset done\n");
 
-//check if the xHCI is stopped
-uint32_t* usb_status_reg = (uint32_t*)(bar_address + 0x84);
-while ((*usb_status_reg & (1 << 0)) == 0);
-print_string("2");
-
-// initialize a reset by setting the 2nd bit to 1
-*usb_command_reg |= (1 << 1);
-
-// wait until the HCRST is clear
-while (*usb_command_reg & (1 << 1));
-print_string("3");
-// wait for the CNR bit to clear
-while (*usb_status_reg & (1 << 11));
-print_string("4");
-// start the controller again
-*usb_command_reg |= 0x1;
-print_string("xHCI restarted");
 }

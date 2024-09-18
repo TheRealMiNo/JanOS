@@ -1,5 +1,6 @@
 #include "screen.h"
 #include "../kernel/low_level.h"
+#include <stdint.h>
 
 void set_cursor(int offset) {
     offset /= 2;
@@ -72,6 +73,20 @@ void print_string(char *string) {
         i++;
     }
     set_cursor(offset);
+}
+
+void print_hex(uint32_t number) {
+    const char hex_digits[] = "0123456789ABCDEF";
+    char buffer[9];
+    buffer[8] = '\0';
+
+    for (int i = 7; i >= 0; --i) {
+        buffer[i] = hex_digits[number & 0xF];
+        number >>= 4;
+    }
+
+    // Print the hex representation
+    print_string(buffer);
 }
 
 void clear_screen() {

@@ -15,7 +15,9 @@ uint32_t pci_config_read(uint8_t bus, uint8_t device, uint8_t function, uint8_t 
     // Read from the PCI configuration data port
     return inl(PCI_CONFIG_DATA);
 }
-void enumerate_pci_devices() {
+
+uint32_t get_bar_address() {
+    // enumerate through PCI to find xHCI
     for (uint8_t bus = 0; bus < 255; bus++) {
         for (uint8_t device = 0; device < 32; device++) {
             for (uint8_t function = 0; function < 8; function++) {
@@ -25,8 +27,6 @@ void enumerate_pci_devices() {
                     // No device present
                     continue;
                 }
-                else {
-                }
 
                 // Read class code (at offset 0x08)
                 uint32_t class_code_reg = pci_config_read(bus, device, function, 0x08);
@@ -35,12 +35,38 @@ void enumerate_pci_devices() {
                 uint8_t prog_if    = (class_code_reg >> 8)  & 0xFF;
 
                 // Check if it's a xHCI controller
-                if (base_class == 0x0C && sub_class == 0x03 && (prog_if == 0x30 || prog_if == 0x20 || prog_if == 0x10 ||prog_if == 0x00)) {
-                    // xHCI controller found
+                if (base_class == 0x0C && sub_class == 0x03 && prog_if == 0x30) {
                     print_string("found xHCI controller\n");
-                    return;
+
+                    // return bar_adress
+                    return pci_config_read(bus, device, function, 0x10);
                 }
             }
         }
     }
+}
+
+void reset_controller(uint32_t bar_address){
+// stopp the xHCI
+uint32_t* usb_command_reg = (uint32_t*)(bar_address + 0x80);
+*usb_command_reg &= ~0x1;
+print_string("1");
+
+//check if the xHCI is stopped
+uint32_t* usb_status_reg = (uint32_t*)(bar_address + 0x84);
+while ((*usb_status_reg & (1 << 0)) == 0);
+print_string("2");
+
+// initialize a reset by setting the 2nd bit to 1
+*usb_command_reg |= (1 << 1);
+
+// wait until the HCRST is clear
+while (*usb_command_reg & (1 << 1));
+print_string("3");
+// wait for the CNR bit to clear
+while (*usb_status_reg & (1 << 11));
+print_string("4");
+// start the controller again
+*usb_command_reg |= 0x1;
+print_string("xHCI restarted");
 }

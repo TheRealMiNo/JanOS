@@ -1,0 +1,1 @@
+qemu-system-i386 -drive format=raw,file=C:\Users\minot\OneDrive\Desktop\assembly\output\os.img to run

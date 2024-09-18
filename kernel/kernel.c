@@ -37,9 +37,9 @@ void enumerate_pci_devices() {
                 uint8_t sub_class  = (class_code_reg >> 16) & 0xFF;
                 uint8_t prog_if    = (class_code_reg >> 8)  & 0xFF;
 
-                // Check if it's a cHCI (XHCI) controller
+                // Check if it's a xHCI controller
                 if (base_class == 0x0C && sub_class == 0x03 && (prog_if == 0x30 || prog_if == 0x20 || prog_if == 0x10 ||prog_if == 0x00)) {
-                    // cHCI controller found
+                    // xHCI controller found
                     print_string("found xHCI controller\n");
                     return;
                 }

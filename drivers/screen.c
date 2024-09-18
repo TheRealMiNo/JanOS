@@ -1,5 +1,5 @@
 #include "screen.h"
-#include "../kernel/low_level.c"
+#include "../kernel/low_level.h"
 
 void set_cursor(int offset) {
     offset /= 2;

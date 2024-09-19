@@ -74,6 +74,20 @@ void print_string(char *string) {
     set_cursor(offset);
 }
 
+void print_hex(uint32_t number) {
+    const char hex_digits[] = "0123456789ABCDEF";
+    char buffer[9];
+    buffer[8] = '\0';
+
+    for (int i = 7; i >= 0; --i) {
+        buffer[i] = hex_digits[number & 0xF];
+        number >>= 4;
+    }
+
+    // Print the hex representation
+    print_string(buffer);
+}
+
 void clear_screen() {
     for (int i = 0; i < MAX_COLS * MAX_ROWS; ++i) {
         set_char_at_video_memory(' ', i * 2);

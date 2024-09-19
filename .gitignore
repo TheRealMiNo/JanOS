@@ -1,5 +1,11 @@
-# Ignore object files
+# Ignore all .o files
 *.o
 
-# Ignore binary files
+# Ignore all .bin files
 *.bin
+
+# Ignore all .img files
+*.img
+
+# Don't ignore os.img
+!os.img

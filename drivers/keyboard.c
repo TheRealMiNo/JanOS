@@ -44,7 +44,7 @@ uint32_t get_bar_address() {
                         print_string("found bar, but no memory mapped");
                         continue;
                     }
-                    return bar & ~0b1111;
+                    return bar & ~0b1111 ;
                 }
             }
         }
@@ -54,10 +54,14 @@ uint32_t get_bar_address() {
 void reset_controller(uint32_t bar_address){
 // stopp the xHCI
 print_string("initialize xHCI reset\n");
+
 uint8_t* cap_length_reg = (uint8_t*)bar_address;
-uint32_t* usb_command_reg = (uint32_t*)(bar_address + *cap_length_reg);
-*usb_command_reg |= 0x01;
-while (*usb_command_reg & 0x01) {
+uint32_t* usb_command_reg = bar_address + *cap_length_reg;
+
+//reseting the controller
+*usb_command_reg |= 0b10;
+print_hex(*usb_command_reg);
+if (*usb_command_reg & 0b10) {
     print_string("waiting...");
 }
 print_string("reset done\n");

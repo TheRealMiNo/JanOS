@@ -42,7 +42,7 @@ $(KERNEL_BIN): $(KERNEL_ENTRY_O) $(KERNEL_FILES_O)
 
 $(OS_IMG): $(BOOT_SECT_IMG) $(KERNEL_BIN)
 	$(MKDIR) $(OUTPUT_DIR)
-	$(DD) if=/dev/zero of=$@ bs=512 count=128
+	$(DD) if=/dev/zero of=$@ bs=512 count=512
 	$(DD) if=$(BOOT_SECT_IMG) of=$@ bs=512 count=1 conv=notrunc
 	$(DD) if=$(KERNEL_BIN) of=$@ bs=512 seek=1 conv=notrunc
 

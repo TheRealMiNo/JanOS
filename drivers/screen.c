@@ -88,6 +88,13 @@ void print_hex(uint32_t number) {
     print_string(buffer);
 }
 
+void print_address_info(char *label, uint32_t address) {
+    print_string(label);
+    print_string(": ");
+    print_hex(address);
+    print_string("\n");
+}
+
 void clear_screen() {
     for (int i = 0; i < MAX_COLS * MAX_ROWS; ++i) {
         set_char_at_video_memory(' ', i * 2);

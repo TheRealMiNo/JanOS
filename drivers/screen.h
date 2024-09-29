@@ -22,3 +22,4 @@ int scroll_ln(int offset);
 void print_string(char *string);
 void print_hex(uint32_t number);
 void clear_screen();
+void print_address_info(char *label, uint32_t address);

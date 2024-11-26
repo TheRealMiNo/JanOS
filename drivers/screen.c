@@ -1,5 +1,6 @@
 #include "screen.h"
 #include "../kernel/low_level.h"
+#include <stdarg.h>
 
 void set_cursor(int offset) {
     offset /= 2;
@@ -56,22 +57,40 @@ int scroll_ln(int offset) {
     return offset - 2 * MAX_COLS;
 }
 
-void print_string(char *string) {
+void print_string(char *string, ...) {
+    va_list args;
+    va_start(args, string);
+
     int offset = get_cursor();
     int i = 0;
+
     while (string[i] != 0) {
         if (offset >= MAX_ROWS * MAX_COLS * 2) {
             offset = scroll_ln(offset);
         }
         if (string[i] == '\n') {
             offset = move_offset_to_new_line(offset);
-        } else {
+        }
+        else if (string[i] == '\b'){
+            set_cursor(offset-1);
+            offset = get_cursor();
+            set_char_at_video_memory(' ', offset);
+        }
+        else if (string[i] == '%' && string[i+1] == 's'){
+            char *next_string = va_arg(args, char *);
+            set_cursor(offset);
+            print_string(next_string);
+            offset = get_cursor();
+            i++;
+        }
+        else {
             set_char_at_video_memory(string[i], offset);
             offset += 2;
         }
         i++;
     }
     set_cursor(offset);
+    va_end(args);
 }
 
 void print_hex(uint32_t number) {
@@ -100,4 +119,64 @@ void clear_screen() {
         set_char_at_video_memory(' ', i * 2);
     }
     set_cursor(get_offset(0, 0));
+}
+
+void check_input(int offset) {
+    int line = offset / 160;
+    unsigned char *vidmem = (unsigned char *) VIDEO_ADDRESS + line * 160;
+    char str[81];
+    for (int i = 0; i < 160; i += 2){
+        str[i/2] = vidmem[i];
+    }
+    str[80] = '\0';
+
+    //strip command
+    char* space_pos = strchr(str, ' ');
+    //-1 to strip away the $
+    int command_length = space_pos ? space_pos - str - 1: strlen(str);
+    char command[command_length];
+    for (int i = 0; i < command_length; i++)
+    {
+        command[i] = str[i+1];
+    }
+
+    if (!strncmp(command, "echo", command_length)) {
+        print_string("\n%s\n$", str + 6);
+    }
+    else if (!strncmp(command, "ls", command_length)){
+        print_string("\nno filesystem implemented\n$");
+    }
+    else {
+        print_string("\ncommand not found\n$", str);
+    }
+}
+
+void terminal(){
+    int offset = get_cursor();
+    char ascii_char;
+    while (1){
+        ascii_char = keyboard_handler();
+
+        if (ascii_char) {
+            //Delete character
+            if (ascii_char == '\b'){
+                if (offset % 160 == 2) continue;
+                offset -= 2;
+                set_char_at_video_memory(' ', offset);
+                set_cursor(offset);
+                continue;
+            }
+            //enter
+            if (ascii_char == '\n'){
+                check_input(offset);
+                offset = move_offset_to_new_line(offset);
+                offset = move_offset_to_new_line(offset) + 2;
+                set_cursor(offset);
+                continue;
+            }
+            set_char_at_video_memory(ascii_char, offset);
+            offset += 2;
+            set_cursor(offset);
+        }
+    }
 }

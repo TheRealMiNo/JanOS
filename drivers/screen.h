@@ -19,7 +19,7 @@ void memory_copy(char *source, char *dest, int nbytes);
 int move_offset_to_new_line(int offset);
 void set_char_at_video_memory(char character, int offset);
 int scroll_ln(int offset);
-void print_string(char *string);
+void print_string(char *string, ...);
 void print_hex(uint32_t number);
 void clear_screen();
 void print_address_info(char *label, uint32_t address);

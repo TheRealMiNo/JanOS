@@ -65,16 +65,11 @@ void print_string(char *string, ...) {
     int i = 0;
 
     while (string[i] != 0) {
-        if (offset >= MAX_ROWS * MAX_COLS * 2) {
-            offset = scroll_ln(offset);
-        }
         if (string[i] == '\n') {
             offset = move_offset_to_new_line(offset);
-        }
-        else if (string[i] == '\b'){
-            set_cursor(offset-1);
-            offset = get_cursor();
-            set_char_at_video_memory(' ', offset);
+            if (offset >= MAX_ROWS * MAX_COLS * 2) {
+                offset = scroll_ln(offset);
+            }
         }
         else if (string[i] == '%' && string[i+1] == 's'){
             char *next_string = va_arg(args, char *);
@@ -121,6 +116,28 @@ void clear_screen() {
     set_cursor(get_offset(0, 0));
 }
 
+
+void echo(const char* args) {
+    print_string("\n%s\n$", args);
+}
+
+void ls(const char* args) {
+    print_string("\nno filesystem implemented\n$");
+}
+
+
+typedef struct {
+    const char *name;
+    void (*func)();
+} CommandMap;
+
+
+CommandMap command_table[] = {
+    {"echo", echo},
+    {"ls", ls}
+};
+
+
 void check_input(int offset) {
     int line = offset / 160;
     unsigned char *vidmem = (unsigned char *) VIDEO_ADDRESS + line * 160;
@@ -134,21 +151,22 @@ void check_input(int offset) {
     char* space_pos = strchr(str, ' ');
     //-1 to strip away the $
     int command_length = space_pos ? space_pos - str - 1: strlen(str);
-    char command[command_length];
+    char inputed_command[command_length];
     for (int i = 0; i < command_length; i++)
     {
-        command[i] = str[i+1];
+        inputed_command[i] = str[i+1];
     }
 
-    if (!strncmp(command, "echo", command_length)) {
-        print_string("\n%s\n$", str + 6);
+
+    //look up if command exists
+    for (int i = 0; i < sizeof(command_table) / sizeof(command_table[0]); i++) {
+        if (!strncmp(inputed_command, command_table[i].name, command_length)) {
+            command_table[i].func(space_pos+1);
+            return;
+        }
     }
-    else if (!strncmp(command, "ls", command_length)){
-        print_string("\nno filesystem implemented\n$");
-    }
-    else {
-        print_string("\ncommand not found\n$", str);
-    }
+    print_string("\ncommand: \"%s\" not found\n$", inputed_command);
+
 }
 
 void terminal(){
@@ -169,9 +187,7 @@ void terminal(){
             //enter
             if (ascii_char == '\n'){
                 check_input(offset);
-                offset = move_offset_to_new_line(offset);
-                offset = move_offset_to_new_line(offset) + 2;
-                set_cursor(offset);
+                offset = get_cursor();
                 continue;
             }
             set_char_at_video_memory(ascii_char, offset);

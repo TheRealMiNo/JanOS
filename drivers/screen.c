@@ -165,7 +165,7 @@ void check_input(int offset) {
 
     //look up if command exists
     for (int i = 0; i < sizeof(command_table) / sizeof(command_table[0]); i++) {
-        if (!strncmp(inputed_command, command_table[i].name, command_length)) {
+        if (!strcmp(inputed_command, command_table[i].name)) {
             command_table[i].func(space_pos+1);
             return;
         }

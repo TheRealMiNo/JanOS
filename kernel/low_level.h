@@ -7,4 +7,4 @@ unsigned char port_byte_in(unsigned short port);
 void outl(unsigned short port, unsigned int data);
 uint32_t inl(unsigned short port);
 
-int strncmp(const char *s1, const char *s2, int n);
+int strcmp(const char *str1, const char *str2);

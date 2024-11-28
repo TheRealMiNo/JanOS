@@ -125,6 +125,10 @@ void ls(const char* args) {
     print_string("\nno filesystem implemented\n$");
 }
 
+void test(const char* args) {
+    print_string("\naa\n");
+}
+
 
 typedef struct {
     const char *name;
@@ -134,9 +138,9 @@ typedef struct {
 
 CommandMap command_table[] = {
     {"echo", echo},
-    {"ls", ls}
+    {"ls", ls},
+    {"test", test}
 };
-
 
 void check_input(int offset) {
     int line = offset / 160;
@@ -151,11 +155,12 @@ void check_input(int offset) {
     char* space_pos = strchr(str, ' ');
     //-1 to strip away the $
     int command_length = space_pos ? space_pos - str - 1: strlen(str);
-    char inputed_command[command_length];
+    char inputed_command[command_length+1];
     for (int i = 0; i < command_length; i++)
     {
         inputed_command[i] = str[i+1];
     }
+    inputed_command[command_length] = '\0';
 
 
     //look up if command exists

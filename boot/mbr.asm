@@ -41,5 +41,16 @@ MSG_REAL_MODE db " Started in 16 - bit Real Mode " , 0
 MSG_PROT_MODE db " Successfully landed in 32 - bit Protected Mode " , 0
 MSG_LOAD_KERNEL db " Loading kernel into memory. " , 0
 ; Bootsector padding
+
+times 446 - ($ - $$) db 0  ; Bootloader space (446 bytes)
+
+; Partition entry (16 bytes, points to FAT32 starting at sector 2048)
+db 0x80                    ; Bootable flag
+db 0x01, 0x01, 0x00        ; CHS address of partition start (dummy)
+db 0x0B                    ; Partition type (FAT32)
+db 0xFE, 0xFF, 0xFF        ; CHS address of partition end (dummy)
+dd 2048                    ; LBA of partition start
+dd 204800 - 2048           ; Number of sectors in the partition
+
 times 510 -( $ - $$ ) db 0
 dw 0xaa55

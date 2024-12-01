@@ -4,17 +4,17 @@
 
 void set_cursor(int offset) {
     offset /= 2;
-    port_byte_out(VGA_CTRL_REGISTER, VGA_OFFSET_HIGH);
-    port_byte_out(VGA_DATA_REGISTER, (unsigned char) (offset >> 8));
-    port_byte_out(VGA_CTRL_REGISTER, VGA_OFFSET_LOW);
-    port_byte_out(VGA_DATA_REGISTER, (unsigned char) (offset & 0xff));
+    outb(VGA_CTRL_REGISTER, VGA_OFFSET_HIGH);
+    outb(VGA_DATA_REGISTER, (unsigned char) (offset >> 8));
+    outb(VGA_CTRL_REGISTER, VGA_OFFSET_LOW);
+    outb(VGA_DATA_REGISTER, (unsigned char) (offset & 0xff));
 }
 
 int get_cursor() {
-    port_byte_out(VGA_CTRL_REGISTER, VGA_OFFSET_HIGH);
-    int offset = port_byte_in(VGA_DATA_REGISTER) << 8;
-    port_byte_out(VGA_CTRL_REGISTER, VGA_OFFSET_LOW);
-    offset += port_byte_in(VGA_DATA_REGISTER);
+    outb(VGA_CTRL_REGISTER, VGA_OFFSET_HIGH);
+    int offset = inb(VGA_DATA_REGISTER) << 8;
+    outb(VGA_CTRL_REGISTER, VGA_OFFSET_LOW);
+    offset += inb(VGA_DATA_REGISTER);
     return offset * 2;
 }
 
@@ -91,9 +91,9 @@ void print_string(char *string, ...) {
 void print_hex(uint32_t number) {
     const char hex_digits[] = "0123456789ABCDEF";
     char buffer[9];
-    buffer[8] = '\0';
+    buffer[4] = '\0';
 
-    for (int i = 7; i >= 0; --i) {
+    for (int i = 3; i >= 0; --i) {
         buffer[i] = hex_digits[number & 0xF];
         number >>= 4;
     }

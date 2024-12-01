@@ -14,9 +14,9 @@ unsigned char keyboard_map[128] = {
 
 char keyboard_handler() {
     // Check if the keyboard data is available
-    unsigned char status = port_byte_in(KEYBOARD_STATUS_PORT);
+    unsigned char status = inb(KEYBOARD_STATUS_PORT);
     if (status & 0x01) { // Output buffer full
-        unsigned char scan_code = port_byte_in(KEYBOARD_DATA_PORT);
+        unsigned char scan_code = inb(KEYBOARD_DATA_PORT);
 
         // Check if the scan code is within range of our map
         if (scan_code < 128) {

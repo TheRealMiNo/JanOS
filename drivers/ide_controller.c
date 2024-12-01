@@ -1,0 +1,86 @@
+#include <stdint.h>
+#include "../kernel/low_level.h"
+#include "ide_controller.h"
+
+void read_sector(uint16_t *buffer, uint32_t lba) {
+    // Select Master drive with LBA mode
+    outb(0x1F6, 0xE0);
+
+    // Wait for BSY to clear
+    while (inb(0x1F7) & 0x80) {
+        print_string("Waiting for BSY to clear...\n");
+    }
+
+    // Set sector count and LBA address
+    outb(0x1F2, 0x01);              // Sector count: 1
+    outb(0x1F3, lba & 0xFF);         // LBA low byte
+    outb(0x1F4, (lba >> 8) & 0xFF);  // LBA mid byte
+    outb(0x1F5, (lba >> 16) & 0xFF); // LBA high byte
+
+    // Send READ command
+    outb(0x1F7, 0x20);
+
+    // Wait for DRQ to set or check for errors
+    while (!(inb(0x1F7) & 0x08)) {
+        uint8_t status = inb(0x1F7);
+        if (status & 0x01) { // ERR bit
+            uint8_t error = inb(0x1F1);
+            print_string("Error occurred: ");
+            print_hex(error);
+            return;
+        }
+        if (status & 0x20) { // DF bit
+            print_string("Device fault\n");
+            return;
+        }
+    }
+
+    // Read 256 words (512 bytes)
+    for (int i = 0; i < 256; i++) {
+        buffer[i] = inw(0x1F0);
+        print_hex(buffer[i]);
+    }
+
+    print_string("Sector read successfully\n");
+}
+
+void write_sector(uint16_t *buffer, uint32_t lba) {
+    // Select Master drive with LBA mode
+    outb(0x1F6, 0xE0);
+
+    // Wait for BSY to clear
+    while (inb(0x1F7) & 0x80) {
+        print_string("Waiting for BSY to clear...\n");
+    }
+
+    // Set sector count and LBA address
+    outb(0x1F2, 0x01);              // Sector count: 1
+    outb(0x1F3, lba & 0xFF);         // LBA low byte
+    outb(0x1F4, (lba >> 8) & 0xFF);  // LBA mid byte
+    outb(0x1F5, (lba >> 16) & 0xFF); // LBA high byte
+
+    // Send READ command
+    outb(0x1F7, 0x30);
+
+    // Wait for DRQ to set or check for errors
+    while (!(inb(0x1F7) & 0x08)) {
+        uint8_t status = inb(0x1F7);
+        if (status & 0x01) { // ERR bit
+            uint8_t error = inb(0x1F1);
+            print_string("Error occurred: ");
+            print_hex(error);
+            return;
+        }
+        if (status & 0x20) { // DF bit
+            print_string("Device fault\n");
+            return;
+        }
+    }
+
+    // Write 256 words (512 bytes)
+    for (int i = 0; i < 256; i++) {
+        outw(0x1F0, buffer[i]);
+    }
+
+    print_string("Sector written successfully\n");
+}

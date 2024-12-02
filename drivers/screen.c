@@ -91,6 +91,20 @@ void print_string(char *string, ...) {
 void print_hex(uint32_t number) {
     const char hex_digits[] = "0123456789ABCDEF";
     char buffer[9];
+    buffer[8] = '\0';
+
+    for (int i = 7; i >= 0; --i) {
+        buffer[i] = hex_digits[number & 0xF];
+        number >>= 4;
+    }
+
+    // Print the hex representation
+    print_string(buffer);
+}
+
+void print_word(uint16_t number) {
+    const char hex_digits[] = "0123456789ABCDEF";
+    char buffer[5];
     buffer[4] = '\0';
 
     for (int i = 3; i >= 0; --i) {
@@ -175,6 +189,7 @@ void check_input(int offset) {
 }
 
 void terminal(){
+    print_string("$");
     int offset = get_cursor();
     char ascii_char;
     while (1){

@@ -58,6 +58,14 @@ $(OS_IMG): $(MBR_IMG) $(KERNEL_BIN) $(FAT32_IMG)
 	# Write the FAT32 image starting at sector 2048 (i.e., offset 2048 * 512 bytes)
 	$(DD) if=$(FAT32_IMG) of=$@ bs=512 seek=2048 conv=notrunc
 
+# only maps the kernel and mbr to os.img to safe time
+restore: $(MBR_IMG) $(KERNEL_BIN)
+	# Update the MBR (first 512 bytes) in the OS image
+	$(DD) if=$(MBR_IMG) of=$(OS_IMG) bs=512 count=1 conv=notrunc
+	# Update the kernel (starting at sector 1)
+	$(DD) if=$(KERNEL_BIN) of=$(OS_IMG) bs=512 seek=1 conv=notrunc
+
+
 clean:
 	$(RM) $(MBR_IMG) $(KERNEL_ENTRY_O) $(KERNEL_FILES_O) $(KERNEL_BIN) $(OS_IMG)
 

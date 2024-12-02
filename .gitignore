@@ -2,6 +2,3 @@
 *.o
 *.bin
 *.img
-
-# Don't ignore os.img
-!os.img

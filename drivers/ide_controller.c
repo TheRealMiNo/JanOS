@@ -39,27 +39,25 @@ void read_sector(uint16_t *buffer, uint32_t lba) {
     for (int i = 0; i < 256; i++) {
         buffer[i] = inw(0x1F0);
     }
-    print_string("Sector read successfully\n");
 }
 
-uint16_t get_root_directory(){
+uint32_t get_root_directory() {
     uint16_t buffer[256];
-    read_sector(buffer, 0x800);
-    if (buffer[22] == 0x0002) {
+    read_sector(buffer, 0x800); // Read the boot sector
 
+    if (buffer[22] == 0x0002) { // Confirm FAT32 signature
+        uint16_t BPB_RsvdSecCnt = buffer[0x0E / 2];
+        uint8_t BPB_NumFATs = buffer[0x10 / 2] & 0xFF;
+        uint32_t BPB_FATSz32 = buffer[0x24 / 2] | (buffer[0x26 / 2] << 16);
 
-    uint16_t BPB_RsvdSecCnt = buffer[0x0E / 2];
-    uint8_t BPB_NumFATs = buffer[0x10 / 2] & 0xFF;
-    uint32_t BPB_FATSz32 = buffer[0x24 / 2] | (buffer[0x26 / 2] << 16);
-
-    uint32_t root_sector = BPB_RsvdSecCnt + (BPB_NumFATs * BPB_FATSz32);
-    return root_sector + 0x800;
+        uint32_t root_sector = BPB_RsvdSecCnt + (BPB_NumFATs * BPB_FATSz32);
+        return root_sector + 0x800; // Add partition offset
     }
 
-    
     print_string("error: in get_root_directory\n");
     return 0x0000;
 }
+
 
 void write_sector(uint16_t *buffer, uint32_t lba) {
     // Select Master drive with LBA mode
@@ -98,6 +96,4 @@ void write_sector(uint16_t *buffer, uint32_t lba) {
     for (int i = 0; i < 256; i++) {
         outw(0x1F0, buffer[i]);
     }
-
-    print_string("Sector written successfully\n");
 }

@@ -116,6 +116,14 @@ void print_word(uint16_t number) {
     print_string(buffer);
 }
 
+void print_word_string(uint16_t word) {
+    char str[3];
+    str[0] = (char)(word & 0xFF);         // Lower byte to first character
+    str[1] = (char)((word >> 8) & 0xFF);  // Upper byte to second character
+    str[2] = '\0'; // Null-terminate the string
+    print_string(str);
+}
+
 void print_address_info(char *label, uint32_t address) {
     print_string(label);
     print_string(": ");
@@ -132,15 +140,20 @@ void clear_screen() {
 
 
 void echo(const char* args) {
-    print_string("\n%s\n$", args);
+    print_string(args);
 }
 
 void ls(const char* args) {
-    print_string("\nno filesystem implemented\n$");
-}
-
-void test(const char* args) {
-    print_string("\naa\n");
+    uint16_t root_directory = get_root_directory();
+    uint16_t buffer[256];
+    read_sector(buffer, get_root_directory());
+    for (int i = 0; i < 5; i++){
+        if (buffer[16 + i*32] == 0x0000) continue;
+        for(int j = 0; j < 4; j++){
+            print_word_string(buffer[16 + i*32 + j]);
+        }
+        print_string("\n");
+    }
 }
 
 
@@ -152,8 +165,7 @@ typedef struct {
 
 CommandMap command_table[] = {
     {"echo", echo},
-    {"ls", ls},
-    {"test", test}
+    {"ls", ls}
 };
 
 void check_input(int offset) {
@@ -181,10 +193,11 @@ void check_input(int offset) {
     for (int i = 0; i < sizeof(command_table) / sizeof(command_table[0]); i++) {
         if (!strcmp(inputed_command, command_table[i].name)) {
             command_table[i].func(space_pos+1);
+            print_string("\n$");
             return;
         }
     }
-    print_string("\ncommand: \"%s\" not found\n$", inputed_command);
+    print_string("command: \"%s\" not found\n$", inputed_command);
 
 }
 
@@ -206,6 +219,7 @@ void terminal(){
             }
             //enter
             if (ascii_char == '\n'){
+                print_string("\n");
                 check_input(offset);
                 offset = get_cursor();
                 continue;

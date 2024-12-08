@@ -143,16 +143,48 @@ void echo(const char* args) {
     print_string(args);
 }
 
-void ls(const char* args) {
-    uint16_t root_directory = get_root_directory();
+void ls(const char* args, uint16_t *current_directory) {
     uint16_t buffer[256];
-    read_sector(buffer, get_root_directory());
+    read_sector(buffer, *current_directory);
     for (int i = 0; i < 5; i++){
         if (buffer[16 + i*32] == 0x0000) continue;
         for(int j = 0; j < 4; j++){
             print_word_string(buffer[16 + i*32 + j]);
         }
         print_string("\n");
+    }
+}
+
+void cd(const char* args, uint16_t *current_directory) {
+
+    //get first argument
+    char* space_pos = strchr(args, ' ');
+    //-1 to strip away the $
+    int argument_length = space_pos ? space_pos - args : strlen(args);
+    char inputed_argument[argument_length+1];
+    for (int i = 0; i < argument_length; i++)
+    {
+        inputed_argument[i] = args[i];
+    }
+    inputed_argument[argument_length] = '\0';
+
+
+    uint16_t buffer[256];
+    read_sector(buffer, *current_directory);
+    for (int i = 0; i < 256; i+=32){
+        if (buffer[21+i] >> 8 == 0x10){
+            for (int j = 0; args[j] != '\0' || args[j+1] != '\0'; j+=2){
+                char str[3];
+                str[0] = (char)(buffer[j+16] & 0xFF);         // Lower byte to first character
+                str[1] = (char)((buffer[j+16] >> 8) & 0xFF);  // Upper byte to second character
+                str[2] = '\0';
+                if (!strcmp(str, inputed_argument)){
+                    print_string("they are the same\n");
+                    *current_directory = get_root_directory() + buffer[93] - 2;
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -165,10 +197,11 @@ typedef struct {
 
 CommandMap command_table[] = {
     {"echo", echo},
-    {"ls", ls}
+    {"ls", ls},
+    {"cd", cd}
 };
 
-void check_input(int offset) {
+void check_input(int offset, uint16_t *current_directory) {
     int line = offset / 160;
     unsigned char *vidmem = (unsigned char *) VIDEO_ADDRESS + line * 160;
     char str[81];
@@ -188,11 +221,10 @@ void check_input(int offset) {
     }
     inputed_command[command_length] = '\0';
 
-
     //look up if command exists
     for (int i = 0; i < sizeof(command_table) / sizeof(command_table[0]); i++) {
         if (!strcmp(inputed_command, command_table[i].name)) {
-            command_table[i].func(space_pos+1);
+            command_table[i].func(space_pos+1, current_directory);
             print_string("\n$");
             return;
         }
@@ -202,6 +234,7 @@ void check_input(int offset) {
 }
 
 void terminal(){
+    uint16_t current_directory = get_root_directory();
     print_string("$");
     int offset = get_cursor();
     char ascii_char;
@@ -220,7 +253,7 @@ void terminal(){
             //enter
             if (ascii_char == '\n'){
                 print_string("\n");
-                check_input(offset);
+                check_input(offset, &current_directory);
                 offset = get_cursor();
                 continue;
             }

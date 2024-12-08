@@ -41,32 +41,32 @@ $(KERNEL_FILES_O): %.o: %.c
 $(KERNEL_BIN): $(KERNEL_ENTRY_O) $(KERNEL_FILES_O)
 	$(LD) -m elf_i386 -T linker.ld -o $@ $(KERNEL_FILES_O) $(KERNEL_ENTRY_O) --oformat binary
 
-# Create a FAT32 file system image
-$(FAT32_IMG): 
+$(OS_IMG): $(MBR_IMG) $(KERNEL_BIN)
 	$(MKDIR) $(OUTPUT_DIR)
-	# Create an empty image file of the size you want, here 50 MB (adjust as needed)
-	dd if=/dev/zero of=$@ bs=1M count=50
-	# Create a FAT32 file system on the image
-	$(MKFS) -F 32 $@
-
-$(OS_IMG): $(MBR_IMG) $(KERNEL_BIN) $(FAT32_IMG)
-	$(MKDIR) $(OUTPUT_DIR)
-	# Create the OS image with an initial 512-byte boot sector (MBR)
-	$(DD) if=/dev/zero of=$@ bs=512 count=512
 	$(DD) if=$(MBR_IMG) of=$@ bs=512 count=1 conv=notrunc
 	$(DD) if=$(KERNEL_BIN) of=$@ bs=512 seek=1 conv=notrunc
-	# Write the FAT32 image starting at sector 2048 (i.e., offset 2048 * 512 bytes)
-	$(DD) if=$(FAT32_IMG) of=$@ bs=512 seek=2048 conv=notrunc
 
-# only maps the kernel and mbr to os.img to safe time
-restore: $(MBR_IMG) $(KERNEL_BIN)
-	# Update the MBR (first 512 bytes) in the OS image
+# Create a FAT32 file system image
+create_fat: 
+	$(MKDIR) $(OUTPUT_DIR)
+	# Create an empty image file of the size you want, here 50 MB (adjust as needed)
+	dd if=/dev/zero of=$(FAT32_IMG) bs=1M count=50
+	# Create a FAT32 file system on the image
+	$(MKFS) -F 32 $(FAT32_IMG)
+
+
+# Map the FAT32 image into the OS image
+map_fat: $(MBR_IMG) $(KERNEL_BIN) $(FAT32_IMG)
+	$(MKDIR) $(OUTPUT_DIR)
+	# Create the OS image with an initial 512-byte boot sector (MBR)
+	$(DD) if=/dev/zero of=$(OS_IMG) bs=512 count=512
 	$(DD) if=$(MBR_IMG) of=$(OS_IMG) bs=512 count=1 conv=notrunc
-	# Update the kernel (starting at sector 1)
 	$(DD) if=$(KERNEL_BIN) of=$(OS_IMG) bs=512 seek=1 conv=notrunc
+	# Write the FAT32 image starting at sector 2048 (i.e., offset 2048 * 512 bytes)
+	$(DD) if=$(FAT32_IMG) of=$(OS_IMG) bs=512 seek=2048 conv=notrunc
 
-
+# Clean up generated files
 clean:
-	$(RM) $(MBR_IMG) $(KERNEL_ENTRY_O) $(KERNEL_FILES_O) $(KERNEL_BIN) $(OS_IMG)
+	$(RM) $(MBR_IMG) $(KERNEL_ENTRY_O) $(KERNEL_FILES_O) $(KERNEL_BIN)
 
-.PHONY: all clean
+.PHONY: all clean create_fat map_fat

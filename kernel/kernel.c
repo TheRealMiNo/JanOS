@@ -1,10 +1,12 @@
 #include <stdint.h>
+#include "low_level.h"
 #include "../drivers/screen.h"
 #include "../drivers/keyboard.h"
-#include "low_level.h"
+#include "../drivers/serialkeyboard.h"
+#include "../drivers/ide_controller.h"
+
 
 void main() {
     clear_screen();
-    uint32_t bar_address = get_bar_address();
-    reset_controller(bar_address);
+    terminal();
 }

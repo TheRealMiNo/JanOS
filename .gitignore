@@ -1,11 +1,4 @@
-# Ignore all .o files
+# Ignore all .o, .bin and .img files
 *.o
-
-# Ignore all .bin files
 *.bin
-
-# Ignore all .img files
 *.img
-
-# Don't ignore os.img
-!os.img

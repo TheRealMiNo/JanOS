@@ -221,6 +221,9 @@ void check_input(int offset, uint16_t *current_directory) {
     }
     inputed_command[command_length] = '\0';
 
+    //makes that the output of the command is written op a new line
+    print_string("\n");
+
     //look up if command exists
     for (int i = 0; i < sizeof(command_table) / sizeof(command_table[0]); i++) {
         if (!strcmp(inputed_command, command_table[i].name)) {
@@ -252,7 +255,6 @@ void terminal(){
             }
             //enter
             if (ascii_char == '\n'){
-                print_string("\n");
                 check_input(offset, &current_directory);
                 offset = get_cursor();
                 continue;

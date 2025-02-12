@@ -155,6 +155,32 @@ void ls(const char* args, uint16_t *current_directory) {
     }
 }
 
+void nls(const char* args, uint16_t *current_directory) {
+    uint16_t buffer[256];
+    read_sector(buffer, *current_directory);
+    for (int i = 0; i < 16; i++){
+        if (buffer[i*16] == 0x0000) break;
+        if((buffer[i*16 + 5] << 16) >> 24 == 0x0F){
+            for(int j = 0; j < 5; j++){
+                print_word_string(buffer[i*16+j] >> 8 );
+            }
+            for(int j = 0; j < 6; j++){
+                print_word_string(buffer[i*16+j+7]);
+            }
+            for(int j = 0; j < 2; j++){
+                print_word_string(buffer[i*16+j+14]);
+            }
+            print_string("\n");
+            i++;
+            continue;
+        };
+        for(int j = 0; j < 4; j++){
+            print_word_string(buffer[i*16 + j]);
+        }
+        print_string("\n");
+    }
+}
+
 void cd(const char* args, uint16_t *current_directory) {
 
     //get first argument
@@ -198,7 +224,8 @@ typedef struct {
 CommandMap command_table[] = {
     {"echo", echo},
     {"ls", ls},
-    {"cd", cd}
+    {"cd", cd},
+    {"nls", nls}
 };
 
 void check_input(int offset, uint16_t *current_directory) {

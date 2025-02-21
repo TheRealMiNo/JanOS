@@ -143,6 +143,13 @@ void echo(const char* args) {
     print_string(args);
 }
 
+void test(const char* args, uint16_t *current_directory){
+    uint16_t buffer[256];
+    read_sector(buffer, *current_directory+1);
+    for (int i = 0; i < 256; i++) {
+        print_word(buffer[i]);
+    }
+}
 
 void ls(const char* args, uint16_t *current_directory) {
     uint16_t buffer[256];
@@ -170,11 +177,9 @@ void ls(const char* args, uint16_t *current_directory) {
     }
 }
 
-void cd(const char* args, uint16_t *current_directory) {
-
+void cd(const char* args, uint16_t *current_directory){
     //get first argument
     char* space_pos = strchr(args, ' ');
-    //-1 to strip away the $
     int argument_length = space_pos ? space_pos - args : strlen(args);
     char inputed_argument[argument_length+1];
     for (int i = 0; i < argument_length; i++)
@@ -182,23 +187,52 @@ void cd(const char* args, uint16_t *current_directory) {
         inputed_argument[i] = args[i];
     }
     inputed_argument[argument_length] = '\0';
-
-
     uint16_t buffer[256];
     read_sector(buffer, *current_directory);
-    for (int i = 0; i < 256; i+=32){
-        if (buffer[21+i] >> 8 == 0x10){
-            for (int j = 0; args[j] != '\0' || args[j+1] != '\0'; j+=2){
-                char str[3];
-                str[0] = (char)(buffer[j+16] & 0xFF);         // Lower byte to first character
-                str[1] = (char)((buffer[j+16] >> 8) & 0xFF);  // Upper byte to second character
-                str[2] = '\0';
-                if (!strcmp(str, inputed_argument)){
-                    print_string("they are the same\n");
-                    *current_directory = get_root_directory() + buffer[93] - 2;
-                    break;
+    for (int i = 0; i < 16; i++){                    
+        char entry[14] = { '\0' };
+        if (buffer[i*16] == 0x0000) break;
+        //looking for longname directory entries
+        if((buffer[i*16 + 5] << 16) >> 24 == 0x0F){
+            if((buffer[i*16 + 21] << 16) >> 24 == 0x10){
+                if((buffer[i*16 + 5] << 16) >> 24 == 0x0F){
+                    for(int j = 0; j < 5; j++){
+                        entry[j] = (char)(buffer[i*16+j] >> 8 & 0xFF);
+                    }
+                    for(int j = 0; j < 6; j++){
+                        entry[j+5] = (char)(buffer[i*16+j]& 0xFF);
+                    }
+                    for(int j = 0; j < 2; j++){
+                        entry[j+11] = (char)(buffer[i*16+j]& 0xFF);
+                    }
                 }
+            
+            if(strcmp(entry, inputed_argument) == 0){
+                if (buffer[i*16+29] == 0) {
+                    *current_directory = get_root_directory();
+                }
+                else *current_directory = get_root_directory() + buffer[i*16+29] - 2;
+                break;
             }
+            i++;
+            continue;
+            }
+        }
+        //looking for normal directory entries
+        if((buffer[i*16 + 5] << 16) >> 24 == 0x10){
+            for(int j = 0; j < 3; j++){
+                if((char)(buffer[i*16+j*2] & 0xFF) == ' ') break;
+                entry[j*2] = (char)(buffer[i*16+j*2] & 0xFF);         // Lower byte to first character
+                if((char)((buffer[i*16+j*2] >> 8) & 0xFF) == ' ') break;
+                entry[j*2+1] = (char)((buffer[i*16+j*2] >> 8) & 0xFF);  // Upper byte to second character
+            }
+            if(strcmp(entry, inputed_argument) == 0){
+                if (buffer[i*16+13] == 0) {
+                    *current_directory = get_root_directory();
+                }
+                else *current_directory = get_root_directory() + buffer[i*16+13] - 2;
+                break;
+            }     
         }
     }
 }
@@ -213,7 +247,8 @@ typedef struct {
 CommandMap command_table[] = {
     {"echo", echo},
     {"ls", ls},
-    {"cd", cd}
+    {"cd", cd},
+    {"test", test}
 };
 
 void check_input(int offset, uint16_t *current_directory) {

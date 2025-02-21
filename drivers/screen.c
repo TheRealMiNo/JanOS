@@ -143,19 +143,8 @@ void echo(const char* args) {
     print_string(args);
 }
 
-void ls(const char* args, uint16_t *current_directory) {
-    uint16_t buffer[256];
-    read_sector(buffer, *current_directory);
-    for (int i = 0; i < 5; i++){
-        if (buffer[16 + i*32] == 0x0000) continue;
-        for(int j = 0; j < 4; j++){
-            print_word_string(buffer[16 + i*32 + j]);
-        }
-        print_string("\n");
-    }
-}
 
-void nls(const char* args, uint16_t *current_directory) {
+void ls(const char* args, uint16_t *current_directory) {
     uint16_t buffer[256];
     read_sector(buffer, *current_directory);
     for (int i = 0; i < 16; i++){
@@ -224,8 +213,7 @@ typedef struct {
 CommandMap command_table[] = {
     {"echo", echo},
     {"ls", ls},
-    {"cd", cd},
-    {"nls", nls}
+    {"cd", cd}
 };
 
 void check_input(int offset, uint16_t *current_directory) {

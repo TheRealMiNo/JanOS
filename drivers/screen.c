@@ -143,18 +143,11 @@ void echo(const char* args) {
     print_string(args);
 }
 
-void test(const char* args, uint16_t *current_directory){
-    uint16_t buffer[256];
-    read_sector(buffer, *current_directory+1);
-    for (int i = 0; i < 256; i++) {
-        print_word(buffer[i]);
-    }
-}
-
 void ls(const char* args, uint16_t *current_directory) {
     uint16_t buffer[256];
     read_sector(buffer, *current_directory);
     for (int i = 0; i < 16; i++){
+        if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
         if (buffer[i*16] == 0x0000) break;
         if((buffer[i*16 + 5] << 16) >> 24 == 0x0F){
             for(int j = 0; j < 5; j++){
@@ -177,6 +170,66 @@ void ls(const char* args, uint16_t *current_directory) {
     }
 }
 
+void cat(const char* args, uint16_t *current_directory){
+    //get first argument
+    char* space_pos = strchr(args, ' ');
+    int argument_length = space_pos ? space_pos - args : strlen(args);
+    char inputed_argument[argument_length+1];
+    for (int i = 0; i < argument_length; i++)
+    {
+        inputed_argument[i] = args[i];
+    }
+    inputed_argument[argument_length] = '\0';
+    uint16_t buffer[256];
+    read_sector(buffer, *current_directory);
+    for (int i = 0; i < 16; i++){
+        if (buffer[i*16] == 0x0000) break;
+        if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
+
+        char entry[14] = {0};
+        if((buffer[i*16 + 5] >> 8) == 0x0F){
+            if((buffer[i*16 + 21] >> 8) == 0x10) continue;
+            for(int j = 0; j < 5; j++){
+                entry[j] = (char)(buffer[i*16+j] >> 8 & 0xFF);
+            }
+            for(int j = 0; j < 6; j++){
+                entry[j+5] = (char)(buffer[i*16+j+7]& 0xFF);
+            }
+            for(int j = 0; j < 2; j++){
+                entry[j+11] = (char)(buffer[i*16+j+14]& 0xFF);
+            }
+            if(strcmp(entry, inputed_argument) == 0){
+                uint16_t file[256];
+                read_sector(file, get_root_directory() + buffer[i*16+29] - 2);
+                for(int j = 0; j < 256; j++){
+                    print_word_string(file[j]);
+                }
+                return;
+            }
+            i++;
+            continue;
+        };
+        if((buffer[i*16 + 5] >> 8) == 0x10) continue;
+        for(int j = 0; j < 4; j++){
+            for(int j = 0; j < 4; j++){
+                if((char)(buffer[i*16+j*2] & 0xFF) == ' ') break;
+                entry[j*2] = (char)(buffer[i*16+j*2] & 0xFF);         // Lower byte to first character
+                if((char)((buffer[i*16+j*2] >> 8) & 0xFF) == ' ') break;
+                entry[j*2+1] = (char)((buffer[i*16+j*2] >> 8) & 0xFF);  // Upper byte to second character
+            }
+            if(strcmp(entry, inputed_argument) == 0){
+                uint16_t file[256];
+                read_sector(file, get_root_directory() + buffer[i*16+13] - 2);
+                for(int j = 0; j < 256; j++){
+                    print_word_string(file[j]);
+                }
+                return;
+            }     
+        }
+    }
+    print_string("File %s not found", inputed_argument);
+}
+
 void cd(const char* args, uint16_t *current_directory){
     //get first argument
     char* space_pos = strchr(args, ' ');
@@ -190,37 +243,37 @@ void cd(const char* args, uint16_t *current_directory){
     uint16_t buffer[256];
     read_sector(buffer, *current_directory);
     for (int i = 0; i < 16; i++){                    
-        char entry[14] = { '\0' };
+        char entry[14] = {0};
         if (buffer[i*16] == 0x0000) break;
+        if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
         //looking for longname directory entries
         if((buffer[i*16 + 5] << 16) >> 24 == 0x0F){
-            if((buffer[i*16 + 21] << 16) >> 24 == 0x10){
+            if((buffer[i*16 + 21] >> 8)== 0x10){
                 if((buffer[i*16 + 5] << 16) >> 24 == 0x0F){
                     for(int j = 0; j < 5; j++){
                         entry[j] = (char)(buffer[i*16+j] >> 8 & 0xFF);
                     }
                     for(int j = 0; j < 6; j++){
-                        entry[j+5] = (char)(buffer[i*16+j]& 0xFF);
+                        entry[j+5] = (char)(buffer[i*16+j+7]& 0xFF);
                     }
                     for(int j = 0; j < 2; j++){
-                        entry[j+11] = (char)(buffer[i*16+j]& 0xFF);
+                        entry[j+11] = (char)(buffer[i*16+j+14]& 0xFF);
                     }
                 }
-            
-            if(strcmp(entry, inputed_argument) == 0){
-                if (buffer[i*16+29] == 0) {
-                    *current_directory = get_root_directory();
+                if(strcmp(entry, inputed_argument) == 0){
+                    if (buffer[i*16+29] == 0) {
+                        *current_directory = get_root_directory();
+                    }
+                    else *current_directory = get_root_directory() + buffer[i*16+29] - 2;
+                    return;
                 }
-                else *current_directory = get_root_directory() + buffer[i*16+29] - 2;
-                break;
-            }
             i++;
             continue;
             }
         }
         //looking for normal directory entries
-        if((buffer[i*16 + 5] << 16) >> 24 == 0x10){
-            for(int j = 0; j < 3; j++){
+        if((buffer[i*16 + 5] >> 8) == 0x10){
+            for(int j = 0; j < 4; j++){
                 if((char)(buffer[i*16+j*2] & 0xFF) == ' ') break;
                 entry[j*2] = (char)(buffer[i*16+j*2] & 0xFF);         // Lower byte to first character
                 if((char)((buffer[i*16+j*2] >> 8) & 0xFF) == ' ') break;
@@ -231,10 +284,11 @@ void cd(const char* args, uint16_t *current_directory){
                     *current_directory = get_root_directory();
                 }
                 else *current_directory = get_root_directory() + buffer[i*16+13] - 2;
-                break;
+                return;
             }     
         }
     }
+    print_string("Directory: %s not found", inputed_argument);
 }
 
 
@@ -248,7 +302,7 @@ CommandMap command_table[] = {
     {"echo", echo},
     {"ls", ls},
     {"cd", cd},
-    {"test", test}
+    {"cat", cat}
 };
 
 void check_input(int offset, uint16_t *current_directory) {

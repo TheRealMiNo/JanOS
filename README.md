@@ -11,7 +11,6 @@ qemu-system-i386 -drive format=raw,file=C:\Users\minec\Desktop\JanOS\output\os.i
 https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/extensible-host-controler-interface-usb-xhci.pdf
 
 ## TODO
-- implement cat
 - implement touch
 
 ## time bombs

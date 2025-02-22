@@ -145,7 +145,7 @@ void echo(const char* args) {
 
 void ls(const char* args, uint16_t *current_directory) {
     uint16_t buffer[256];
-    read_sector(buffer, *current_directory);
+    read_sector(buffer, *current_directory, 1);
     for (int i = 0; i < 16; i++){
         if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
         if (buffer[i*16] == 0x0000) break;
@@ -181,7 +181,7 @@ void cat(const char* args, uint16_t *current_directory){
     }
     inputed_argument[argument_length] = '\0';
     uint16_t buffer[256];
-    read_sector(buffer, *current_directory);
+    read_sector(buffer, *current_directory, 1);
     for (int i = 0; i < 16; i++){
         if (buffer[i*16] == 0x0000) break;
         if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
@@ -199,9 +199,10 @@ void cat(const char* args, uint16_t *current_directory){
                 entry[j+11] = (char)(buffer[i*16+j+14]& 0xFF);
             }
             if(strcmp(entry, inputed_argument) == 0){
-                uint16_t file[256];
-                read_sector(file, get_root_directory() + buffer[i*16+29] - 2);
-                for(int j = 0; j < 256; j++){
+                unsigned int amount = (buffer[i*16+30] + (buffer[i*16+31] << 16))/512+1;
+                uint16_t file[256*amount];
+                read_sector(file, get_root_directory() + buffer[i*16+29] - 2, amount);
+                for(int j = 0; j < 256*amount; j++){
                     print_word_string(file[j]);
                 }
                 return;
@@ -219,7 +220,7 @@ void cat(const char* args, uint16_t *current_directory){
             }
             if(strcmp(entry, inputed_argument) == 0){
                 uint16_t file[256];
-                read_sector(file, get_root_directory() + buffer[i*16+13] - 2);
+                read_sector(file, get_root_directory() + buffer[i*16+13] - 2, 1);
                 for(int j = 0; j < 256; j++){
                     print_word_string(file[j]);
                 }
@@ -241,7 +242,7 @@ void cd(const char* args, uint16_t *current_directory){
     }
     inputed_argument[argument_length] = '\0';
     uint16_t buffer[256];
-    read_sector(buffer, *current_directory);
+    read_sector(buffer, *current_directory, 1);
     for (int i = 0; i < 16; i++){                    
         char entry[14] = {0};
         if (buffer[i*16] == 0x0000) break;

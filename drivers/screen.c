@@ -251,6 +251,7 @@ void cat(const char* args, uint16_t *current_directory){
                 }
                 return;
             }
+            long_name_position = 0;
         }
         uint32_t FAT_number = (FAT_buffer[(directory_cluster - get_root_directory() + 2)*2] | (FAT_buffer[(directory_cluster - get_root_directory() + 2)*2 + 1] << 16));
         if (FAT_number >= 0x0FFFFFF8 && FAT_number <= 0x0FFFFFFF){

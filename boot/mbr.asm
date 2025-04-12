@@ -3,7 +3,7 @@
 KERNEL_OFFSET equ 0x1000 ; This is the memory offset to which we will load our kernel
 mov [ BOOT_DRIVE ], dl ; BIOS stores our boot drive in DL , so it ’s
 ; best to remember this for later.
-mov bp , 0x9000 ; Set -up the stack.
+mov bp , 0xF000 ; Set -up the stack.
 mov sp , bp
 mov bx , MSG_REAL_MODE ; Announce that we are starting
 call print_string ; booting from 16 - bit real mode
@@ -23,7 +23,7 @@ load_kernel :
 mov bx , MSG_LOAD_KERNEL ; Print a message to say we are loading the kernel
 call print_string
 mov bx , KERNEL_OFFSET ; Set -up parameters for our disk_load routine , so
-mov dh , 15 ; that we load the first 15 sectors ( excluding
+mov dh , 50 ; that we load the first 15 sectors ( excluding
 mov dl , [ BOOT_DRIVE ] ; the boot sector ) from the boot disk ( i.e. our
 call disk_load ; kernel code ) to address KERNEL_OFFSET
 ret

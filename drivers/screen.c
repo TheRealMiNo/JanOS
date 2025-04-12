@@ -201,7 +201,7 @@ void cat(const char* args, uint16_t *current_directory){
         inputed_argument[i] = args[i];
     }
     inputed_argument[argument_length] = '\0';
-    char entry[255] = {0};
+    char entry[256] = {0};
     uint16_t buffer[256];
     uint16_t FAT_buffer[256];
     uint16_t directory_cluster = *current_directory;
@@ -213,7 +213,7 @@ void cat(const char* args, uint16_t *current_directory){
             if (buffer[i*16] == 0x0000) break; // look for attribute of file instead of name
             if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
             if (!long_name_position){
-                char entry[255] = {0}; //reset string if not long name
+                char entry[256] = {0}; //reset string if not long name
             } 
             if((buffer[i*16 + 5] >> 8) == 0x0F){
                 for(int j = 0; j < 5; j++){
@@ -276,44 +276,40 @@ void cd(const char* args, uint16_t *current_directory){
         inputed_argument[i] = args[i];
     }
     inputed_argument[argument_length] = '\0';
+
+    char entry[256] = {0};
+    int long_name_position = 0;
     uint16_t buffer[256];
     read_sector(buffer, *current_directory, 1);
-    for (int i = 0; i < 16; i++){                    
-        char entry[14] = {0};
+    for (int i = 0; i < 16; i++){
+        if(!long_name_position){
+            char entry[256] = {0}; //reset string if not long name
+        }
         if (buffer[i*16] == 0x0000) break;
         if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
         //looking for longname directory entries
-        if((buffer[i*16 + 5] << 16) >> 24 == 0x0F){
-            if((buffer[i*16 + 21] >> 8)== 0x10){
-                if((buffer[i*16 + 5] << 16) >> 24 == 0x0F){
-                    for(int j = 0; j < 5; j++){
-                        entry[j] = (char)(buffer[i*16+j] >> 8 & 0xFF);
-                    }
-                    for(int j = 0; j < 6; j++){
-                        entry[j+5] = (char)(buffer[i*16+j+7]& 0xFF);
-                    }
-                    for(int j = 0; j < 2; j++){
-                        entry[j+11] = (char)(buffer[i*16+j+14]& 0xFF);
-                    }
-                }
-                if(strcmp(entry, inputed_argument) == 0){
-                    if (buffer[i*16+29] == 0) {
-                        *current_directory = get_root_directory();
-                    }
-                    else *current_directory = get_root_directory() + buffer[i*16+29] - 2;
-                    return;
-                }
-            i++;
-            continue;
+        if(buffer[i*16 + 5] >> 8 == 0x0F){
+            for(int j = 0; j < 5; j++){
+                entry[j+long_name_position] = (char)(buffer[i*16+j] >> 8 & 0xFF);
             }
+            for(int j = 0; j < 6; j++){
+                entry[j+5+long_name_position] = (char)(buffer[i*16+j+7]& 0xFF);
+            }
+            for(int j = 0; j < 2; j++){
+                entry[j+11+long_name_position] = (char)(buffer[i*16+j+14]& 0xFF);
+            }
+            long_name_position += 13;
+            continue;
         }
         //looking for normal directory entries
         if((buffer[i*16 + 5] >> 8) == 0x10){
-            for(int j = 0; j < 4; j++){
-                if((char)(buffer[i*16+j*2] & 0xFF) == ' ') break;
-                entry[j*2] = (char)(buffer[i*16+j*2] & 0xFF);         // Lower byte to first character
-                if((char)((buffer[i*16+j*2] >> 8) & 0xFF) == ' ') break;
-                entry[j*2+1] = (char)((buffer[i*16+j*2] >> 8) & 0xFF);  // Upper byte to second character
+            if(!long_name_position){
+                for(int j = 0; j < 4; j++){
+                    if((char)(buffer[i*16+j*2] & 0xFF) == ' ') break;
+                    entry[j*2] = (char)(buffer[i*16+j*2] & 0xFF);         // Lower byte to first character
+                    if((char)((buffer[i*16+j*2] >> 8) & 0xFF) == ' ') break;
+                    entry[j*2+1] = (char)((buffer[i*16+j*2] >> 8) & 0xFF);  // Upper byte to second character
+                }
             }
             if(strcmp(entry, inputed_argument) == 0){
                 if (buffer[i*16+13] == 0) {
@@ -323,6 +319,8 @@ void cd(const char* args, uint16_t *current_directory){
                 return;
             }     
         }
+        long_name_position = 0; //entry was not a directory
+
     }
     print_string("Directory: %s not found", inputed_argument);
 }

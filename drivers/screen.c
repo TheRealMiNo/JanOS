@@ -141,11 +141,6 @@ void clear_screen() {
     set_cursor(get_offset(0, 0));
 }
 
-
-void echo(const char* args) {
-    print_string(args);
-}
-
 void ls(const char* args, uint16_t *current_directory) {
     uint16_t buffer[256];
     uint16_t FAT_buffer[256];
@@ -333,7 +328,6 @@ typedef struct {
 
 
 CommandMap command_table[] = {
-    {"echo", echo},
     {"ls", ls},
     {"cd", cd},
     {"cat", cat}

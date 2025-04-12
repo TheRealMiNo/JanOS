@@ -25,3 +25,4 @@ void print_hex(uint32_t number);
 void print_word(uint16_t number);
 void clear_screen();
 void print_address_info(char *label, uint32_t address);
+void terminal();

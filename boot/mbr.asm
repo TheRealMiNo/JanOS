@@ -8,6 +8,18 @@ mov sp , bp
 mov bx , MSG_REAL_MODE ; Announce that we are starting
 call print_string ; booting from 16 - bit real mode
 call load_kernel ; Load our kernel
+
+  
+; Switch to VESA Video Mode 0x118 (1920x1080, 32-bit color)
+mov ax, 0x4F02      ; VESA Set Mode function
+mov bx, 0x411B       ; 0x118 is 1920x1080, 32-bit color mode
+int 0x10            ; Call BIOS interrupt 0x10 to set the mode
+
+mov ax, 0x4F01      ; VESA Get Mode Info
+mov cx, 0x411B       ; VESA mode 0x118
+mov di, 0x9000      ; Where to store the ModeInfoBlock
+int 0x10
+
 call switch_to_pm ; Switch to protected mode , from which
 ; we will not return
 jmp $

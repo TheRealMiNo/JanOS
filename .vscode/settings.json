@@ -2,5 +2,11 @@
     "files.associations": {
         "screen.h": "c",
         "stdint.h": "c"
+    },
+    "github.copilot.enable": {
+        "*": true,
+        "plaintext": false,
+        "markdown": false,
+        "scminput": false
     }
 }

@@ -201,56 +201,67 @@ void cat(const char* args, uint16_t *current_directory){
         inputed_argument[i] = args[i];
     }
     inputed_argument[argument_length] = '\0';
+    char entry[255] = {0};
     uint16_t buffer[256];
+    uint16_t FAT_buffer[256];
+    uint16_t directory_cluster = *current_directory;
+    int long_name_position = 0;
     read_sector(buffer, *current_directory, 1);
-    for (int i = 0; i < 16; i++){
-        if (buffer[i*16] == 0x0000) break; // look for attribute of file instead of name
-        if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
-
-        char entry[14] = {0};
-        if((buffer[i*16 + 5] >> 8) == 0x0F){
-            if((buffer[i*16 + 21] >> 8) == 0x10) continue;
-            for(int j = 0; j < 5; j++){
-                entry[j] = (char)(buffer[i*16+j] >> 8 & 0xFF);
+    read_sector(FAT_buffer, get_fat(), 1);
+    while(1){
+        for (int i = 0; i < 16; i++){
+            if (buffer[i*16] == 0x0000) break; // look for attribute of file instead of name
+            if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
+            if (!long_name_position){
+                char entry[255] = {0}; //reset string if not long name
+            } 
+            if((buffer[i*16 + 5] >> 8) == 0x0F){
+                for(int j = 0; j < 5; j++){
+                    entry[j+long_name_position] = (char)(buffer[i*16+j] >> 8 & 0xFF);
+                }
+                for(int j = 0; j < 6; j++){
+                    entry[j+5+long_name_position] = (char)(buffer[i*16+j+7]& 0xFF);
+                }
+                for(int j = 0; j < 2; j++){
+                    entry[j+11+long_name_position] = (char)(buffer[i*16+j+14]& 0xFF);
+                }
+                long_name_position += 13;
+                continue;
             }
-            for(int j = 0; j < 6; j++){
-                entry[j+5] = (char)(buffer[i*16+j+7]& 0xFF);
+            if((buffer[i*16 + 5] >> 8) == 0x10){ //entry was a dictionary
+                long_name_position = 0;
+                continue;
             }
-            for(int j = 0; j < 2; j++){
-                entry[j+11] = (char)(buffer[i*16+j+14]& 0xFF);
+            if(!long_name_position){
+                for(int j = 0; j < 4; j++){
+                    if((char)(buffer[i*16+j*2] & 0xFF) == ' ') break;
+                    entry[j*2] = (char)(buffer[i*16+j*2] & 0xFF);         // Lower byte to first character
+                    if((char)((buffer[i*16+j*2] >> 8) & 0xFF) == ' ') break;
+                    entry[j*2+1] = (char)((buffer[i*16+j*2] >> 8) & 0xFF);  // Upper byte to second character
+                }
             }
             if(strcmp(entry, inputed_argument) == 0){
-                unsigned int amount = (buffer[i*16+30] + (buffer[i*16+31] << 16) + 511)/512;
+                unsigned int amount = (buffer[i*16+14] + (buffer[i*16+15] << 16) + 511)/512;
                 uint16_t file[256];
                 for(int k = 0; k < amount; k++){
-                    read_sector(file, get_root_directory() + buffer[i*16+29] - 2 + k, 1);
+                    read_sector(file, get_root_directory() + buffer[i*16+13] - 2 + k, 1);
                     for(int j = 0; j < 256; j++){
                         print_word_string(file[j]);
                     }
                 }
                 return;
             }
-            i++;
-            continue;
-        };
-        if((buffer[i*16 + 5] >> 8) == 0x10) continue;
-        for(int j = 0; j < 4; j++){
-            for(int j = 0; j < 4; j++){
-                if((char)(buffer[i*16+j*2] & 0xFF) == ' ') break;
-                entry[j*2] = (char)(buffer[i*16+j*2] & 0xFF);         // Lower byte to first character
-                if((char)((buffer[i*16+j*2] >> 8) & 0xFF) == ' ') break;
-                entry[j*2+1] = (char)((buffer[i*16+j*2] >> 8) & 0xFF);  // Upper byte to second character
-            }
-            if(strcmp(entry, inputed_argument) == 0){
-                uint16_t file[256];
-                read_sector(file, get_root_directory() + buffer[i*16+13] - 2, 1);
-                for(int j = 0; j < 256; j++){
-                    print_word_string(file[j]);
-                }
-                return;
-            }     
+        }
+        uint32_t FAT_number = (FAT_buffer[(directory_cluster - get_root_directory() + 2)*2] | (FAT_buffer[(directory_cluster - get_root_directory() + 2)*2 + 1] << 16));
+        if (FAT_number >= 0x0FFFFFF8 && FAT_number <= 0x0FFFFFFF){
+            break;
+        }
+        else{
+            directory_cluster = FAT_number + get_root_directory() - 2;
+            read_sector(buffer, directory_cluster, 1);
         }
     }
+    print_string(entry);
     print_string("File %s not found", inputed_argument);
 }
 
@@ -289,7 +300,6 @@ void cd(const char* args, uint16_t *current_directory){
                         *current_directory = get_root_directory();
                     }
                     else *current_directory = get_root_directory() + buffer[i*16+29] - 2;
-                    print_hex(*current_directory);
                     return;
                 }
             i++;

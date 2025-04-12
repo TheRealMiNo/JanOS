@@ -81,6 +81,9 @@ void print_string(char *string, ...) {
         else {
             set_char_at_video_memory(string[i], offset);
             offset += 2;
+            if (offset >= MAX_ROWS * MAX_COLS * 2) {
+                offset = scroll_ln(offset);
+            }
         }
         i++;
     }
@@ -183,7 +186,7 @@ void cat(const char* args, uint16_t *current_directory){
     uint16_t buffer[256];
     read_sector(buffer, *current_directory, 1);
     for (int i = 0; i < 16; i++){
-        if (buffer[i*16] == 0x0000) break;
+        if (buffer[i*16] == 0x0000) break; // look for attribute of file instead of name
         if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
 
         char entry[14] = {0};
@@ -199,11 +202,13 @@ void cat(const char* args, uint16_t *current_directory){
                 entry[j+11] = (char)(buffer[i*16+j+14]& 0xFF);
             }
             if(strcmp(entry, inputed_argument) == 0){
-                unsigned int amount = (buffer[i*16+30] + (buffer[i*16+31] << 16))/512+1;
-                uint16_t file[256*amount];
-                read_sector(file, get_root_directory() + buffer[i*16+29] - 2, amount);
-                for(int j = 0; j < 256*amount; j++){
-                    print_word_string(file[j]);
+                unsigned int amount = (buffer[i*16+30] + (buffer[i*16+31] << 16) + 511)/512;
+                uint16_t file[256];
+                for(int k = 0; k < amount; k++){
+                    read_sector(file, get_root_directory() + buffer[i*16+29] - 2 + k, 1);
+                    for(int j = 0; j < 256; j++){
+                        print_word_string(file[j]);
+                    }
                 }
                 return;
             }
@@ -351,6 +356,11 @@ void terminal(){
 
         if (ascii_char) {
             //Delete character
+            if (ascii_char == 'p'){
+                int debug = offset;
+                set_cursor(6);
+                print_hex(debug);
+            }
             if (ascii_char == '\b'){
                 if (offset % 160 == 2) continue;
                 offset -= 2;

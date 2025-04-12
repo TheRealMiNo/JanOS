@@ -148,28 +148,46 @@ void echo(const char* args) {
 
 void ls(const char* args, uint16_t *current_directory) {
     uint16_t buffer[256];
+    uint16_t FAT_buffer[256];
+    uint16_t directory_cluster = *current_directory;
+    int processing_long_name = 0;
     read_sector(buffer, *current_directory, 1);
-    for (int i = 0; i < 16; i++){
-        if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
-        if (buffer[i*16] == 0x0000) break;
-        if((buffer[i*16 + 5] << 16) >> 24 == 0x0F){
-            for(int j = 0; j < 5; j++){
-                print_word_string(buffer[i*16+j] >> 8 );
+    read_sector(FAT_buffer, get_fat(), 1);
+    while(1){
+        for (int i = 0; i < 16; i++){
+            if ((buffer[i*16] & 0xFF) == 0x00E5) continue;
+            if (buffer[i*16] == 0x0000) break;
+            if((buffer[i*16 + 5] << 16) >> 24 == 0x0F){
+                processing_long_name = 1;
+                for(int j = 0; j < 5; j++){
+                    print_word_string(buffer[i*16+j] >> 8 );
+                }
+                for(int j = 0; j < 6; j++){
+                    print_word_string(buffer[i*16+j+7]);
+                }
+                for(int j = 0; j < 2; j++){
+                    print_word_string(buffer[i*16+j+14]);
+                }
+                continue;
+            };
+            if(processing_long_name){
+                processing_long_name = 0;
+                print_string("\n");
+                continue;
             }
-            for(int j = 0; j < 6; j++){
-                print_word_string(buffer[i*16+j+7]);
-            }
-            for(int j = 0; j < 2; j++){
-                print_word_string(buffer[i*16+j+14]);
+            for(int j = 0; j < 4; j++){
+                print_word_string(buffer[i*16 + j]);
             }
             print_string("\n");
-            i++;
-            continue;
-        };
-        for(int j = 0; j < 4; j++){
-            print_word_string(buffer[i*16 + j]);
         }
-        print_string("\n");
+        uint32_t FAT_number = (FAT_buffer[(directory_cluster - get_root_directory() + 2)*2] | (FAT_buffer[(directory_cluster - get_root_directory() + 2)*2 + 1] << 16));
+        if (FAT_number >= 0x0FFFFFF8 && FAT_number <= 0x0FFFFFFF){
+            break;
+        }
+        else{
+            directory_cluster = FAT_number + get_root_directory() - 2;
+            read_sector(buffer, directory_cluster, 1);
+        }
     }
 }
 
@@ -271,6 +289,7 @@ void cd(const char* args, uint16_t *current_directory){
                         *current_directory = get_root_directory();
                     }
                     else *current_directory = get_root_directory() + buffer[i*16+29] - 2;
+                    print_hex(*current_directory);
                     return;
                 }
             i++;
@@ -355,12 +374,11 @@ void terminal(){
         ascii_char = keyboard_handler();
 
         if (ascii_char) {
-            //Delete character
             if (ascii_char == 'p'){
-                int debug = offset;
-                set_cursor(6);
-                print_hex(debug);
+                    set_cursor(6);
+                    print_hex(get_fat());
             }
+            //Delete character
             if (ascii_char == '\b'){
                 if (offset % 160 == 2) continue;
                 offset -= 2;

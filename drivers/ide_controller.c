@@ -60,6 +60,18 @@ uint32_t get_root_directory() {
     return 0x0000;
 }
 
+uint32_t get_fat() {
+    uint16_t buffer[256];
+    read_sector(buffer, 0x800, 1); // Read the boot sector
+
+    if (buffer[22] == 0x0002) { // Confirm FAT32 signature
+        return buffer[7] + 0x800; // Add partition offset
+    }
+
+    print_string("error: in get_fat\n");
+    return 0x0000;
+}
+
 
 void write_sector(uint16_t *buffer, uint32_t lba) {
     // Select Master drive with LBA mode

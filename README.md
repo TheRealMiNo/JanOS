@@ -10,6 +10,9 @@ qemu-system-i386 -drive format=raw,file=C:\Users\minec\Desktop\JanOS\output\os.i
 ## good sources:
 https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/extensible-host-controler-interface-usb-xhci.pdf
 
+## good infos
+- root directory is at 0x1C9000
+
 ## TODO
 - implement touch
 
